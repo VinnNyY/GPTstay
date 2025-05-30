@@ -2,12 +2,6 @@ from openai import OpenAI
 from flask import Flask, request, jsonify
 import os
 
-client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENROUTER_API_KEY")
-
-)
-
 app = Flask(__name__)
 
 @app.route("/claudia", methods=["POST"])
@@ -18,6 +12,14 @@ def claudia():
 
     if not user_msg:
         return jsonify({"error": "Campo 'description' é obrigatório"}), 400
+
+    openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+    print("OPENROUTER_API_KEY:", openrouter_api_key)  # LOG PARA TESTE
+
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=openrouter_api_key
+    )
 
     try:
         response = client.chat.completions.create(
@@ -35,3 +37,4 @@ def claudia():
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8080)
+
