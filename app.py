@@ -1,20 +1,40 @@
 from openai import OpenAI
 from flask import Flask, request, jsonify
+import requests
 import os
 
+# Configuração do OpenRouter (IA)
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENROUTER_API_KEY")  # Certifique-se que a variável está setada corretamente no Railway!
+    api_key=os.getenv("OPENROUTER_API_KEY")
 )
 
+# Configurações Zendesk via variável de ambiente
+ZENDESK_SUBDOMAIN = os.getenv("ZENDESK_SUBDOMAIN")  # agora flexível!
+ZENDESK_EMAIL = os.getenv("ZENDESK_EMAIL")
+ZENDESK_API_TOKEN = os.getenv("ZENDESK_API_TOKEN")
+
 app = Flask(__name__)
+
+def responder_zendesk(ticket_id, resposta):
+    url = f"https://{ZENDESK_SUBDOMAIN}.zendesk.com/api/v2/tickets/{ticket_id}.json"
+    auth = (f"{ZENDESK_EMAIL}/token", ZENDESK_API_TOKEN)
+    headers = {"Content-Type": "application/json"}
+    data = {
+        "ticket": {
+            "comment": {
+                "body": resposta,
+                "public": True  # True = público (cliente vê)
+            }
+        }
+    }
+    resp = requests.put(url, json=data, auth=auth, headers=headers)
+    return resp.status_code, resp.text
 
 @app.route("/claudia", methods=["POST"])
 def claudia():
     data = request.get_json(force=True)
-    # Permite receber 'description' tanto na raiz quanto dentro de 'ticket'
-    user_msg = ""
-    ticket_id = ""
+    # Aceita 'description' e 'id' tanto na raiz quanto dentro de 'ticket'
     if "ticket" in data:
         user_msg = data["ticket"].get("description", "")
         ticket_id = data["ticket"].get("id", "")
@@ -22,8 +42,8 @@ def claudia():
         user_msg = data.get("description", "")
         ticket_id = data.get("ticket_id", "")
 
-    if not user_msg:
-        return jsonify({"error": "Campo 'description' é obrigatório"}), 400
+    if not user_msg or not ticket_id:
+        return jsonify({"error": "Campos obrigatórios não encontrados (description/ticket_id)"}), 400
 
     try:
         response = client.chat.completions.create(
@@ -34,10 +54,20 @@ def claudia():
             ]
         )
         resposta = response.choices[0].message.content.strip()
-        return jsonify({"response": resposta, "ticket_id": ticket_id})
+
+        # Responde automaticamente no Zendesk
+        status, zendesk_resp = responder_zendesk(ticket_id, resposta)
+
+        return jsonify({
+            "status": status,
+            "ticket_id": ticket_id,
+            "ia_response": resposta,
+            "zendesk_response": zendesk_resp
+        })
     except Exception as e:
         print("ERRO DETALHADO:", e)
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8080)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
