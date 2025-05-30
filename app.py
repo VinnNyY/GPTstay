@@ -2,24 +2,28 @@ from openai import OpenAI
 from flask import Flask, request, jsonify
 import os
 
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.getenv("OPENROUTER_API_KEY")  # Certifique-se que a variável está setada corretamente no Railway!
+)
+
 app = Flask(__name__)
 
 @app.route("/claudia", methods=["POST"])
 def claudia():
     data = request.get_json(force=True)
-    user_msg = data.get("description", "")
-    ticket_id = data.get("ticket_id", "")
+    # Permite receber 'description' tanto na raiz quanto dentro de 'ticket'
+    user_msg = ""
+    ticket_id = ""
+    if "ticket" in data:
+        user_msg = data["ticket"].get("description", "")
+        ticket_id = data["ticket"].get("id", "")
+    else:
+        user_msg = data.get("description", "")
+        ticket_id = data.get("ticket_id", "")
 
     if not user_msg:
         return jsonify({"error": "Campo 'description' é obrigatório"}), 400
-
-    openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
-    print("OPENROUTER_API_KEY:", openrouter_api_key)  # LOG PARA TESTE
-
-    client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=openrouter_api_key
-    )
 
     try:
         response = client.chat.completions.create(
@@ -37,4 +41,3 @@ def claudia():
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8080)
-
