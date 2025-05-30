@@ -12,9 +12,8 @@ app = Flask(__name__)
 @app.route("/claudia", methods=["POST"])
 def claudia():
     data = request.get_json(force=True)
-    # Ajuste: aceite 'description' ao invés de 'message'
     user_msg = data.get("description", "")
-    ticket_id = data.get("ticket_id", None)  # Opcional
+    ticket_id = data.get("ticket_id", "")
 
     if not user_msg:
         return jsonify({"error": "Campo 'description' é obrigatório"}), 400
