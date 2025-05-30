@@ -3,20 +3,15 @@ from flask import Flask, request, jsonify
 import os
 import requests
 
-# Recomendado: use variável de ambiente, mas pode passar direto se for só teste
-# os.environ["OPENROUTER_API_KEY"] = "sua-chave-aqui"  # Opcional
-
 print('DEBUG: OPENROUTER_API_KEY:', os.getenv('OPENROUTER_API_KEY'))
 print('DEBUG: ZENDESK_API_TOKEN:', os.getenv('ZENDESK_API_TOKEN'))
 print('DEBUG: ZENDESK_EMAIL:', os.getenv('ZENDESK_EMAIL'))
 print('DEBUG: ZENDESK_SUBDOMAIN:', os.getenv('ZENDESK_SUBDOMAIN'))
 
-# Configuração do client OpenAI para OpenRouter
 openai_client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key="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"
+    api_key=os.getenv("OPENROUTER_API_KEY")
 )
-
 
 ZENDESK_EMAIL = os.getenv("ZENDESK_EMAIL")
 ZENDESK_API_TOKEN = os.getenv("ZENDESK_API_TOKEN")
@@ -34,7 +29,6 @@ def claudia():
         print('ERRO AO LER JSON:', e)
         return jsonify({"error": "Falha ao ler JSON"}), 400
 
-    # Permitir dois formatos de JSON recebidos do webhook
     if "ticket" in data:
         ticket = data["ticket"]
         ticket_id = ticket.get("id")
@@ -56,7 +50,6 @@ def claudia():
         return jsonify({"error": "JSON deve conter 'ticket_id' e 'description' ou 'comment.body'"}), 400
 
     try:
-        # IA responde
         print("DEBUG: Chamando IA...")
         response = openai_client.chat.completions.create(
             model="deepseek/deepseek-r1-0528-qwen3-8b:free",
@@ -71,13 +64,11 @@ def claudia():
         print("ERRO IA:", e)
         return jsonify({"error": f"Erro na IA: {e}"}), 500
 
-    # Enviar resposta para o Zendesk
     try:
         url = f"https://{ZENDESK_SUBDOMAIN}.zendesk.com/api/v2/tickets/{ticket_id}.json"
         headers = {
             "Content-Type": "application/json"
         }
-        # O email precisa estar no formato: user@dominio/token
         auth = (f"{ZENDESK_EMAIL}/token", ZENDESK_API_TOKEN)
         print("DEBUG: Enviando resposta para Zendesk...")
         print("DEBUG: URL:", url)
@@ -87,7 +78,7 @@ def claudia():
             "ticket": {
                 "comment": {
                     "body": claudia_response,
-                    "public": True
+                    "public": True  # ou False, se quiser só nota interna
                 }
             }
         }
