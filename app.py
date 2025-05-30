@@ -11,8 +11,9 @@ print('DEBUG: ZENDESK_SUBDOMAIN:', os.getenv('ZENDESK_SUBDOMAIN'))
 # Configuração dos clientes e variáveis de ambiente
 openai_client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENROUTER_API_KEY")
+    api_key=os.getenv("OPENAI_API_KEY")
 )
+
 
 ZENDESK_EMAIL = os.getenv("ZENDESK_EMAIL")
 ZENDESK_API_TOKEN = os.getenv("ZENDESK_API_TOKEN")
