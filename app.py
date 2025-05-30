@@ -3,17 +3,15 @@ from flask import Flask, request, jsonify
 import os
 import requests
 
-print('DEBUG: OPENROUTER_API_KEY:', os.getenv('OPENROUTER_API_KEY'))
+print('DEBUG: OPENAI_API_KEY:', os.getenv('OPENAI_API_KEY'))
 print('DEBUG: ZENDESK_API_TOKEN:', os.getenv('ZENDESK_API_TOKEN'))
 print('DEBUG: ZENDESK_EMAIL:', os.getenv('ZENDESK_EMAIL'))
 print('DEBUG: ZENDESK_SUBDOMAIN:', os.getenv('ZENDESK_SUBDOMAIN'))
 
-# Configuração dos clientes e variáveis de ambiente
+# Configuração do cliente OpenAI
 openai_client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
     api_key=os.getenv("OPENAI_API_KEY")
 )
-
 
 ZENDESK_EMAIL = os.getenv("ZENDESK_EMAIL")
 ZENDESK_API_TOKEN = os.getenv("ZENDESK_API_TOKEN")
@@ -56,7 +54,7 @@ def claudia():
         # IA responde
         print("DEBUG: Chamando IA...")
         response = openai_client.chat.completions.create(
-            model="deepseek/deepseek-r1-0528-qwen3-8b:free",
+            model="gpt-4o",  # Use "gpt-4o" ou "gpt-3.5-turbo"
             messages=[
                 {"role": "system", "content": "Você é a Claudia, IA de suporte técnico N1 da StayCloud, treinada com base na central de ajuda da empresa. Resolva dúvidas frequentes de clientes, oriente sobre configurações, apontamentos de DNS, e outros tópicos técnicos, sempre com precisão e empatia. Responda sempre em português."},
                 {"role": "user", "content": user_msg}
