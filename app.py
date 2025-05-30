@@ -3,15 +3,18 @@ from flask import Flask, request, jsonify
 import os
 import requests
 
+# Recomendado: use variável de ambiente, mas pode passar direto se for só teste
+# os.environ["OPENROUTER_API_KEY"] = "sua-chave-aqui"  # Opcional
+
 print('DEBUG: OPENROUTER_API_KEY:', os.getenv('OPENROUTER_API_KEY'))
 print('DEBUG: ZENDESK_API_TOKEN:', os.getenv('ZENDESK_API_TOKEN'))
 print('DEBUG: ZENDESK_EMAIL:', os.getenv('ZENDESK_EMAIL'))
 print('DEBUG: ZENDESK_SUBDOMAIN:', os.getenv('ZENDESK_SUBDOMAIN'))
 
-# Configuração dos clientes e variáveis de ambiente
+# Configuração do client OpenAI para OpenRouter
 openai_client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENAI_API_KEY")
+    api_key="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"
 )
 
 
