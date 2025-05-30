@@ -1,45 +1,55 @@
 from openai import OpenAI
 from flask import Flask, request, jsonify
-import requests
 import os
+import requests
 
-# Configuração do OpenRouter (IA)
+# Configure sua chave do OpenRouter como variável de ambiente: OPENROUTER_API_KEY
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=os.getenv("OPENROUTER_API_KEY")
 )
 
-# Configurações Zendesk via variável de ambiente
-ZENDESK_SUBDOMAIN = os.getenv("ZENDESK_SUBDOMAIN")  # agora flexível!
-ZENDESK_EMAIL = os.getenv("ZENDESK_EMAIL")
-ZENDESK_API_TOKEN = os.getenv("ZENDESK_API_TOKEN")
+# Configurações Zendesk
+ZENDESK_SUBDOMAIN = os.getenv("ZENDESK_SUBDOMAIN", "autonotify")  # <--- Altere aqui se precisar
+ZENDESK_API_TOKEN = os.getenv("ZENDESK_API_TOKEN")                # Token da API Zendesk
+ZENDESK_EMAIL = os.getenv("ZENDESK_EMAIL")                        # Email admin da Zendesk
 
 app = Flask(__name__)
 
 def responder_zendesk(ticket_id, resposta):
+    """
+    Faz um POST para responder ao ticket do Zendesk automaticamente
+    """
+    if not (ZENDESK_API_TOKEN and ZENDESK_EMAIL and ZENDESK_SUBDOMAIN):
+        return False, "Zendesk env vars não configuradas"
+
     url = f"https://{ZENDESK_SUBDOMAIN}.zendesk.com/api/v2/tickets/{ticket_id}.json"
     auth = (f"{ZENDESK_EMAIL}/token", ZENDESK_API_TOKEN)
-    headers = {"Content-Type": "application/json"}
-    data = {
+    payload = {
         "ticket": {
             "comment": {
                 "body": resposta,
-                "public": True  # True = público (cliente vê)
+                "public": True
             }
         }
     }
-    resp = requests.put(url, json=data, auth=auth, headers=headers)
-    return resp.status_code, resp.text
+
+    headers = {"Content-Type": "application/json"}
+    try:
+        resp = requests.put(url, json=payload, auth=auth, headers=headers, timeout=15)
+        return resp.status_code, resp.json()
+    except Exception as e:
+        return False, str(e)
 
 @app.route("/claudia", methods=["POST"])
 def claudia():
     data = request.get_json(force=True)
-    ticket = data.get("ticket", data)  # Pega o dict 'ticket' se houver, senão usa o root
+    ticket = data.get("ticket", data)  # Pega dict interno ou root
 
     user_msg = ticket.get("description", "")
     ticket_id = ticket.get("id", "")
 
-    # Zendesk pode enviar o comentário dentro de 'comment'!
+    # Também aceita caso venha como "comment": {"body": "..."}
     if not user_msg and "comment" in ticket:
         user_msg = ticket["comment"].get("body", "")
 
@@ -67,5 +77,4 @@ def claudia():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=8080)
