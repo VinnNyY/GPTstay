@@ -34,16 +34,17 @@ def responder_zendesk(ticket_id, resposta):
 @app.route("/claudia", methods=["POST"])
 def claudia():
     data = request.get_json(force=True)
-    # Aceita 'description' e 'id' tanto na raiz quanto dentro de 'ticket'
-    if "ticket" in data:
-        user_msg = data["ticket"].get("description", "")
-        ticket_id = data["ticket"].get("id", "")
-    else:
-        user_msg = data.get("description", "")
-        ticket_id = data.get("ticket_id", "")
+    ticket = data.get("ticket", data)  # Pega o dict 'ticket' se houver, senão usa o root
+
+    user_msg = ticket.get("description", "")
+    ticket_id = ticket.get("id", "")
+
+    # Zendesk pode enviar o comentário dentro de 'comment'!
+    if not user_msg and "comment" in ticket:
+        user_msg = ticket["comment"].get("body", "")
 
     if not user_msg or not ticket_id:
-        return jsonify({"error": "Campos obrigatórios não encontrados (description/ticket_id)"}), 400
+        return jsonify({"error": "Campos obrigatórios não encontrados (description/comment e id)"}), 400
 
     try:
         response = client.chat.completions.create(
@@ -54,10 +55,7 @@ def claudia():
             ]
         )
         resposta = response.choices[0].message.content.strip()
-
-        # Responde automaticamente no Zendesk
         status, zendesk_resp = responder_zendesk(ticket_id, resposta)
-
         return jsonify({
             "status": status,
             "ticket_id": ticket_id,
