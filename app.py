@@ -82,7 +82,7 @@ def claudia():
             "ticket": {
                 "comment": {
                     "body": claudia_response,
-                    "public": True
+                    "public": False
                 }
             }
         }
