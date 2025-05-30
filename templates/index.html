@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Claudia - Suporte StayCloud</title>
+  <style>
+    body{font-family:Arial,sans-serif;background:#f3f3f3;padding:20px;}
+    .chat-container{max-width:500px;margin:auto;background:#fff;border-radius:10px;
+      box-shadow:0 0 10px rgba(0,0,0,0.1);display:flex;flex-direction:column;height:80vh;}
+    .chat-log{flex:1;overflow-y:auto;padding:20px;}
+    .bot-message,.user-message{padding:10px 15px;border-radius:8px;margin-bottom:10px;
+      max-width:80%;word-wrap:break-word;}
+    .bot-message{background:#e0f7fa;align-self:flex-start;}
+    .user-message{background:#2196F3;color:#fff;align-self:flex-end;}
+    .input-area{display:flex;border-top:1px solid #ccc;}
+    .input-area input{flex:1;border:none;padding:15px;font-size:1rem;}
+    .input-area button{border:none;background:#2196F3;color:#fff;
+      padding:0 20px;cursor:pointer;font-size:1rem;}
+    .input-area input:focus{outline:none;}
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-log" id="chatLog">
+      <div class="bot-message">
+        <strong>Claudia:</strong> {{ saudacao }}! Como posso ajudar?
+      </div>
+    </div>
+    <div class="input-area">
+      <input id="userInput" type="text" placeholder="Digite sua mensagem..." />
+      <button id="sendBtn">Enviar</button>
+    </div>
+  </div>
+
+  <script>
+    const log = document.getElementById('chatLog');
+    const inp = document.getElementById('userInput');
+    const btn = document.getElementById('sendBtn');
+
+    function append(type, text) {
+      const d = document.createElement('div');
+      d.className = type === 'bot' ? 'bot-message' : 'user-message';
+      d.innerHTML = type === 'bot'
+        ? `<strong>Claudia:</strong> ${text}`
+        : text;
+      log.append(d);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function enviar() {
+      const msg = inp.value.trim();
+      if (!msg) return;
+      append('user', msg);
+      inp.value = '';
+
+ fetch('/webhook', {
+  method: 'POST',
+  headers: {'Content-Type':'application/json'},
+  body: JSON.stringify({message: msg})
+})
+.then(r => r.json())
+.then(data => {
+  append('bot', data.response);
+})
+.catch(e => {
+  append('bot', `Erro de rede: ${e}`);
+});
+
+    }
+
+    btn.addEventListener('click', enviar);
+    inp.addEventListener('keypress', e => { if (e.key === 'Enter') enviar(); });
+  </script>
+</body>
+</html>
